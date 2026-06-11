@@ -64,6 +64,30 @@ services:
       retries: 3
       start_period: 30s
 
+  voip-gateway:
+    image: ${VOIP_GATEWAY_IMAGE:-esafx-voip-gateway:latest}
+    build:
+      context: ../../voip-gateway-service
+      dockerfile: Dockerfile
+    container_name: esafx-voip-gateway
+    restart: unless-stopped
+    ports:
+      - "8006:8006"
+    env_file:
+      - ../../voip-gateway-service/.env.staging
+    volumes: *rds-ca-volume
+    depends_on:
+      pii-vault:
+        condition: service_healthy
+      audit-log:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
   crm-api:
     image: ${CRM_IMAGE:-esafx-crm:latest}
     build:
@@ -82,6 +106,8 @@ services:
       pii-vault:
         condition: service_healthy
       audit-log:
+        condition: service_healthy
+      voip-gateway:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
